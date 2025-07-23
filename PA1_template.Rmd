@@ -5,21 +5,66 @@ output:
     keep_md: true
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+
+```
 
 ## Loading and preprocessing the data
-
-
+```{r}
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date)
+```
 
 ## What is mean total number of steps taken per day?
 
-
-
+```{r}
+total_steps <- aggregate(steps ~ date, activity, sum, na.rm=TRUE)
+hist(total_steps$steps, main = "Average Total Number of Steps Taken per Day", xlab = "Steps")
+mean_steps <- mean(total_steps$steps)
+median_steps <- median(total_steps$steps)
+```
+* Mean = `r mean_steps`
+* Median = `r median_steps`
 ## What is the average daily activity pattern?
-
-
-
+```{r}
+average_intervals <- aggregate(steps ~ interval, activity, mean, na.rm = TRUE)
+plot(average_intervals$interval, average_intervals$steps, type = "l", xlab = "5 Minute Interval", ylab = "Average Number of Steps Taken", main = "Average Daily Activity Pattern")
+max_interval<-average_intervals[which.max(average_intervals$steps), ]
+```
+* Maximum step interval = `r max_interval`
 ## Imputing missing values
+```{r}
+na_num <- sum(is.na(activity$steps))
+activity_filled <- activity
+for (i in 1:nrow(activity_filled)) {
+  if (is.na(activity_filled$steps[i])) {
+    activity_filled$steps[i] <- average_intervals$steps[average_intervals$interval == activity_filled$interval[i]]
+  }
+}
 
-
+total_filled <- aggregate(steps ~ date, activity_filled, sum)
+hist(total_filled$steps, main = "Total Number of Steps Taken per Day", xlab = "Steps")
+mean_filled<-mean(total_filled$steps)
+median_filled<-median(total_filled$steps)
+```
+* Total number of missing values = `r na_num`
+* Mean = `r mean_filled`
+* Median = `r median_filled`
 
 ## Are there differences in activity patterns between weekdays and weekends?
+``` {r differences, echo=TRUE}
+activity_filled$day <- weekdays(activity_filled$date)
+for(i in 1:nrow(activity_filled))
+{
+  if (activity_filled$day[i]=="Saturday"|activity_filled$day[i]=="Sunday"){
+    activity_filled$day[i] <- "Weekend"
+  }else{
+    activity_filled$day[i] <- "Weekday"
+  }
+}
+
+total_steps_day <- aggregate(steps ~ interval + day, activity_filled, mean)
+ggplot(total_steps_day, aes(interval, steps)) + geom_line() + facet_grid(day ~ .) + labs(x="5 Minute Interval",y="Average Number of Steps Taken", title="Average Daily Activity Pattern")
+```
